@@ -30,8 +30,39 @@ void TIM2_IRQHandler(void)
     TIM_ClearITUpdate(TIM2);
 }
 
+/******************************************外部中断******************************************/
+/******
+ * GPIOx 的外部中断线连接
+ * 可以有两种写法：库函数写法和寄存器写法
+ * 库函数写法简单易用，不过需要大量宏定义来辅助简化程序
+ * 寄存器写法虽然不通用，但是简化程序
+ * 强烈建议使用寄存器写法。
+******/
+void SYSCFG_EXTI_GPIO(uint8_t EXTI_GPIOx,uint8_t EXTI_Line)
+{
+    //使能时钟
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    SYSCFG->EXTICR[EXTI_Line >> 0x02] |= (((uint32_t)EXTI_GPIOx) << (0x04 * (EXTI_Line & (uint8_t)0x03)));
+    /**
+    寄存器写法实例
+    例: GPIOA 连接到中断线 6
+    SYSCFG->EXTICR[1] &= ~SYSCFG_EXTICR2_EXTI6;     //对应位置清零(可省略)
+    SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI6_PA;   //GPIOA 连接到中断线 6
+    **/
+}
 
-
+/******
+ * 初始化EXTI中断配置
+ * 只针对GPIOA~I;不包括PVD,RTC,USB_OTG,USB_HS,以太网唤醒等
+ * EXTI_Line:     需要使能的中断线 0~15
+ * Rising_Falling:触发模式,1,下升沿;2,上降沿;3，任意电平触发
+******/
+void EXTI_GPIO_Init(uint32_t EXTI_Line,uint8_t Rising_Falling)
+{
+    EXTI->IMR   |= (1<<EXTI_Line);
+    if(Rising_Falling&0x01)EXTI->RTSR  |= (1<<EXTI_Line);
+    if(Rising_Falling&0x02)EXTI->FTSR  |= (1<<EXTI_Line);
+}
 
 /******************************************中断优先级分组******************************************/
 /******
