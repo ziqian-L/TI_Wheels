@@ -9,7 +9,6 @@
 #define MotorB_IN3 PGout(6)
 #define MotorB_IN4 PGout(8)
 
-void Motor_Init(void);
 void Motor_drive_Init(void);
 void TIM8_PWM_Init(uint16_t PSC,uint16_t ARR);
 

@@ -1,22 +1,61 @@
-#include "led.h"
-#include "key.h"
 #include "delay.h"
 #include "usart.h"
 #include "motor.h"
 #include "encoder.h"
 #include "control.h"
 #include "pid.h"
+#include "led.h"
+#include "key.h"
+#include "oled.h"
+#include "mpu6050.h"
+
+/*****
+ * ×óµç»ú£º
+ *      ±àÂëÆ÷£ºTIM3_CH1(PA6)¡¢TIM4_CH2(PA7)
+ *      PWMÊä³ö£ºTIM8_CH1(PC6)
+ *      Õı·´×ª£ºPG7¡¢PG5
+ * ÓÒµç»ú£º
+ *      ±àÂëÆ÷£ºTIM4_CH1(PB6)¡¢TIM4_CH2(PB7)
+ *      PWMÊä³ö£ºTIM8_CH2(PC7)
+ *      Õı·´×ª£ºPG8¡¢PG6
+ * MPU6050£ºPC1(SCL)¡¢PC2(SDA)
+ * À¶ÑÀ£ºPA2(USART2_TX)¡¢PA3(USART2_RX)
+*****/
+
+#define DEBUG
 
 int main(void)
 {
-	//è®¾ç½®ç³»ç»Ÿä¸­æ–­ä¼˜å…ˆçº§åˆ†ç»„2
+    /*ÏµÍ³³õÊ¼»¯*/
+	//ÖĞ¶ÏÓÅÏÈ¼¶·Ö×é2
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-    delay_init(168);//å»¶æ—¶åˆå§‹åŒ–
-    uart_init(115200);//ä¸²å£1åˆå§‹åŒ–
-	Motor_Init();//PWMè¾“å‡ºåˆå§‹åŒ–
-	Encoder_Init();//ç¼–ç å™¨åˆå§‹åŒ–
-	Control_Init();//æ§åˆ¶åˆå§‹åŒ–
-    while(1)
-    {
-    }
+    delay_init(168);//ÑÓÊ±³õÊ¼»¯
+    UART1_Init(115200);//´®¿Ú1³õÊ¼»¯
+	RingBuff_Init(&Uart2_RingBuff);
+	/*°åÔØÍâÉè³õÊ¼»¯*/
+    LED_Init();//°åÔØLED
+	KEY_Init();//°åÔØ°´¼ü
+	OLED_Init();//0.96´çOLED-SSD1306
+    /*Íâ½ÓÄ£¿é³õÊ¼»¯*/	
+	MPU_Init();
+	DMP_Init();
+	/*¿ØÖÆ³õÊ¼»¯*/
+	PID_Init();
+	UART2_Init(115200);//´®¿Ú2
+	Motor_drive_Init();//Õı·´×ª
+	TIM8_PWM_Init(168-1,7200-1);//PWMÊä³ö
+	TIM3_Encoder_Init();//×óµç»ú±àÂëÆ÷
+	TIM4_Encoder_Init();//ÓÒµç»ú±àÂëÆ÷
+	TIM9_Timed_Interrupt(168-1,5000);//¶¨Ê±ÖĞ¶Ï
+    PID_Encoders_SetPoint(9,9);
+	while(1)
+	{
+	}
 }
+
+
+
+
+
+
+

@@ -1,52 +1,87 @@
 #include "control.h"
+#include "usart.h"
+#include "motor.h"
+#include "encoder.h"
 #include "pid.h"
+#include "oled.h"
+#include "mpu6050.h"
+#include "inv_mpu.h"
 
 /********************************************************************
- * æ§åˆ¶å‡åœ¨ä¸­æ–­é‡Œå®Œæˆï¼Œä½¿ç”¨TIM2ä½œä¸ºå®šæ—¶ä¸­æ–­
+ * ¿ØÖÆ¾ùÔÚÖĞ¶ÏÀïÍê³É£¬Ê¹ÓÃTIM9×÷Îª¶¨Ê±ÖĞ¶Ï
 ********************************************************************/
+//PID¿ØÖÆ
+PID_TypeDef PID_Left,PID_Right;
+
+//Í¨¹ı±àÂëÆ÷»ñÈ¡µÄËÙ¶È
+int16_t Left_Wheel_speed,Right_Wheel_speed;
+int32_t Left_Wheel_PWM,Right_Wheel_PWM;
+
+//MPU6050»ñÈ¡µÄÖµ
+float Pitch,Roll,Yaw;		//½Ç¶È
 
 /*****
- * TIM2å®šæ—¶ä¸­æ–­æœåŠ¡å‡½æ•°
+ * Èë¿Ú²ÎÊı£º
+ *  PSC£ºÔ¤·ÖÆµÏµÊı
+ *  ARR£º×Ô¶¯ÖØ×°ÔØÖµ
 *****/
-void TIM2_IRQHandler(void)
-{}
-
-void Control_Init(void)
-{
-	//5msä¸€æ¬¡å®šæ—¶ä¸­æ–­
-	TIM2_Timed_Interrupt(84-1,5000);
-}
-
-/*****
- * å…¥å£å‚æ•°ï¼š
- *  PSCï¼šé¢„åˆ†é¢‘ç³»æ•°
- *  ARRï¼šè‡ªåŠ¨é‡è£…è½½å€¼
-*****/
-void TIM2_Timed_Interrupt(uint32_t PSC,uint32_t ARR)
+void TIM9_Timed_Interrupt(uint32_t PSC,uint32_t ARR)
 {
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     NVIC_InitTypeDef NVIC_InitStructure;
 
-    //TIM2æ—¶é’Ÿ
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
+    //TIM9Ê±ÖÓ
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM9,ENABLE);
 
-    //åˆå§‹åŒ–TIM2æ—¶åŸºå•å…ƒ
-	//å‘ä¸Šè®¡æ•°ã€ä¸åˆ†å‰²æ—¶é’Ÿã€è‡ªåŠ¨é‡è£…è½½å€¼ã€é¢„åˆ†é¢‘ç³»æ•°
+    //³õÊ¼»¯TIM9Ê±»ùµ¥Ôª
+	//ÏòÉÏ¼ÆÊı¡¢²»·Ö¸îÊ±ÖÓ¡¢×Ô¶¯ÖØ×°ÔØÖµ¡¢Ô¤·ÖÆµÏµÊı
 	TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseInitStruct.TIM_Period = ARR;
 	TIM_TimeBaseInitStruct.TIM_Prescaler = PSC;
-	TIM_TimeBaseInit(TIM2,&TIM_TimeBaseInitStruct);
+	TIM_TimeBaseInit(TIM9,&TIM_TimeBaseInitStruct);
 
-    //ä¸­æ–­ä¼˜å…ˆçº§é…ç½®
-    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+    //ÖĞ¶ÏÓÅÏÈ¼¶ÅäÖÃ
+    NVIC_InitStructure.NVIC_IRQChannel = TIM1_BRK_TIM9_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
 
-    //ä½¿èƒ½å®šæ—¶å™¨ä¸­æ–­
-    TIM_ITConfig(TIM2,TIM_IT_Update,ENABLE);
+    //Ê¹ÄÜ¶¨Ê±Æ÷ÖĞ¶Ï
+    TIM_ITConfig(TIM9,TIM_IT_Update,ENABLE);
+	
+	//Ê¹ÄÜ¶¨Ê±Æ÷9
+	TIM_Cmd(TIM9,ENABLE);
 }
+
+
+
+/*****
+ * TIM9¶¨Ê±ÖĞ¶Ï·şÎñº¯Êı
+*****/
+void TIM1_BRK_TIM9_IRQHandler(void)
+{
+    if (TIM_GetITStatus(TIM9,TIM_IT_Update) != RESET)
+    {	
+		/*********************±àÂëÆ÷¿ØËÙ*********************/
+
+		/*1.¶¨Ê±¶ÁÈ¡±àÂëÆ÷¡¢MPU6050µÄÖµ*/
+        Left_Wheel_speed = Read_Speed(3);
+        Right_Wheel_speed = Read_Speed(4);
+        mpu_dmp_get_data(&Pitch,&Roll,&Yaw);
+        /*2.PID¿ØÖÆ*/
+		Left_Wheel_PWM = Positional_PID_Contorl(&PID_Left,Left_Wheel_speed);
+        Right_Wheel_PWM = Positional_PID_Contorl(&PID_Right,Right_Wheel_speed);
+        /*3.PWMÊä³ö*/
+        PWM_Limit(&Left_Wheel_PWM,&Right_Wheel_PWM);
+        Load_PWM(Left_Wheel_PWM,Right_Wheel_PWM);
+    }
+    TIM_ClearFlag(TIM9,TIM_IT_Update);
+}
+
+
+
+
 
 

@@ -1,30 +1,23 @@
 #include "motor.h"
 
 /********************************************************************
- * é‡‡ç”¨L298Né©±åŠ¨ç”µæœºï¼Œéœ€è¦ä½¿ç”¨ä¸¤è·¯PWMï¼Œå››ä¸ªIOå£æ¥æŽ§åˆ¶æ­£åè½¬å’Œç”µæœºè½¬é€Ÿ
- * ä¸€ä¸ªä½¿ç”¨TIM8_CH1(PC6)è¾“å‡ºPWMï¼Œä½¿ç”¨PG7ã€PG5æŽ§åˆ¶æ­£åè½¬
- * ä¸€ä¸ªä½¿ç”¨TIM8_CH2(PC7)è¾“å‡ºPWMï¼Œä½¿ç”¨PG8ã€PG6æŽ§åˆ¶æ­£åè½¬
+ * ²ÉÓÃL298NÇý¶¯µç»ú£¬ÐèÒªÊ¹ÓÃÁ½Â·PWM£¬ËÄ¸öIO¿ÚÀ´¿ØÖÆÕý·´×ªºÍµç»ú×ªËÙ
+ * Ò»¸öÊ¹ÓÃTIM8_CH1(PC6)Êä³öPWM£¬Ê¹ÓÃPG7¡¢PG5¿ØÖÆÕý·´×ª
+ * Ò»¸öÊ¹ÓÃTIM8_CH2(PC7)Êä³öPWM£¬Ê¹ÓÃPG8¡¢PG6¿ØÖÆÕý·´×ª
 ********************************************************************/
 
 #define PWM_MIN	-7200
 #define PWM_MAX	7200
 
-void Motor_Init(void)
-{
-	Motor_drive_Init();
-	TIM8_PWM_Init(168-1,7200-1);
-}
-
-
 void Motor_drive_Init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
-	//GPIOGæ—¶é’Ÿ
+	//GPIOGÊ±ÖÓ
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG,ENABLE);
 
-	/******************åˆå§‹åŒ–æ­£åè½¬GPIOè¾“å‡º******************/
-	//PG5ã€PG6ã€PG7ã€PG8è¾“å‡ºã€æŒ½æŽ¨ã€100MHzã€ä¸‹æ‹‰
+	/******************³õÊ¼»¯Õý·´×ªGPIOÊä³ö******************/
+	//PG5¡¢PG6¡¢PG7¡¢PG8Êä³ö¡¢ÍìÍÆ¡¢100MHz¡¢ÏÂÀ­
 	GPIO_InitStruct.GPIO_Pin	= GPIO_Pin_5|GPIO_Pin_6|GPIO_Pin_7|GPIO_Pin_8;
 	GPIO_InitStruct.GPIO_Mode	= GPIO_Mode_OUT;
 	GPIO_InitStruct.GPIO_OType	= GPIO_OType_PP;
@@ -35,56 +28,68 @@ void Motor_drive_Init(void)
 
 
 /*****
- * å…¥å£å‚æ•°ï¼š
- *  PSCï¼šé¢„åˆ†é¢‘ç³»æ•°
- *  ARRï¼šè‡ªåŠ¨é‡è£…è½½å€¼
+ * Èë¿Ú²ÎÊý£º
+ *  PSC£ºÔ¤·ÖÆµÏµÊý
+ *  ARR£º×Ô¶¯ÖØ×°ÔØÖµ
 *****/
 void TIM8_PWM_Init(uint16_t PSC,uint16_t ARR)
 {
-	GPIO_InitTypeDef GPIO_InitStruct;
-	TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-	TIM_OCInitTypeDef TIM_OCInitStruct;
-
-	//GPIOCæ—¶é’Ÿ
+	GPIO_InitTypeDef GPIO_InitStructure;
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+	TIM_OCInitTypeDef TIM_OCInitStructure;
+	//GPIOC¡¢TIM8Ê±ÖÓ
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8,ENABLE);
-
-	/******************åˆå§‹åŒ–PWMè¾“å‡º******************/
-	//PC6ã€PC7å¤ç”¨ã€æŒ½æŽ¨ã€100MHzã€ä¸‹æ‹‰
-	GPIO_InitStruct.GPIO_Pin	= GPIO_Pin_6|GPIO_Pin_7;
-	GPIO_InitStruct.GPIO_Mode	= GPIO_Mode_AF;
-	GPIO_InitStruct.GPIO_OType	= GPIO_OType_PP;
-	GPIO_InitStruct.GPIO_Speed	= GPIO_High_Speed;
-	GPIO_InitStruct.GPIO_PuPd	= GPIO_PuPd_UP;
-	GPIO_Init(GPIOC,&GPIO_InitStruct);
+	/******************³õÊ¼»¯PWMÊä³ö******************/
+	//PC6¡¢PC7¸´ÓÃ¡¢ÍìÍÆ¡¢100MHz¡¢ÏÂÀ­
+	GPIO_InitStructure.GPIO_Pin		= GPIO_Pin_6|GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Mode	= GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType	= GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Speed	= GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd	= GPIO_PuPd_DOWN;
+	GPIO_Init(GPIOC,&GPIO_InitStructure);
 	
-	//GPIOå¤ç”¨
+	//GPIO¸´ÓÃ
 	GPIO_PinAFConfig(GPIOC,GPIO_PinSource6,GPIO_AF_TIM8);
 	GPIO_PinAFConfig(GPIOC,GPIO_PinSource7,GPIO_AF_TIM8);
 	
-	//åˆå§‹åŒ–TIM8æ—¶åŸºå•å…ƒ
-	//å‘ä¸Šè®¡æ•°ã€ä¸åˆ†å‰²æ—¶é’Ÿã€è‡ªåŠ¨é‡è£…è½½å€¼ã€é¢„åˆ†é¢‘ç³»æ•°
-	TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-	TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-	TIM_TimeBaseInitStruct.TIM_Period = ARR;
-	TIM_TimeBaseInitStruct.TIM_Prescaler = PSC;
-	TIM_TimeBaseInit(TIM8,&TIM_TimeBaseInitStruct);
+	//³õÊ¼»¯TIM8Ê±»ùµ¥Ôª
+	//ÏòÉÏ¼ÆÊý¡¢²»·Ö¸îÊ±ÖÓ¡¢×Ô¶¯ÖØ×°ÔØÖµ¡¢Ô¤·ÖÆµÏµÊý
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseStructure.TIM_Period = ARR;
+	TIM_TimeBaseStructure.TIM_Prescaler = PSC;
+	TIM_TimeBaseInit(TIM8,&TIM_TimeBaseStructure);
 	
-	//åˆå§‹åŒ–TIM8_CH1ã€TIM8_CH2è¾“å‡ºæ¯”è¾ƒçš„PWMæ¨¡å¼
-	//PWM1æ¨¡å¼ã€é«˜ç”µå¹³æœ‰æ•ˆã€è¾“å‡ºæ¯”è¾ƒä½¿èƒ½ã€è‡ªåŠ¨é‡è£…è½½å€¼ä¸º0
-	TIM_OCInitStruct.TIM_OCMode	= TIM_OCMode_PWM1;
-	TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_High;
-	TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
-	TIM_OCInitStruct.TIM_Pulse = 0;
-	TIM_OC1Init(TIM8,&TIM_OCInitStruct);
-	TIM_OC2Init(TIM8,&TIM_OCInitStruct);
+	//³õÊ¼»¯TIM8_CH1¡¢TIM8_CH2Êä³ö±È½ÏµÄPWMÄ£Ê½
+	//PWM1Ä£Ê½¡¢¸ßµçÆ½ÓÐÐ§¡¢Êä³ö±È½ÏÊ¹ÄÜ¡¢×Ô¶¯ÖØ×°ÔØÖµÎª0
+	TIM_OCInitStructure.TIM_OCMode	= TIM_OCMode_PWM1;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_Pulse = 0;
+	TIM_OC1Init(TIM8,&TIM_OCInitStructure);
+
+	TIM_OCInitStructure.TIM_OCMode	= TIM_OCMode_PWM1;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_Pulse = 0;
+	TIM_OC2Init(TIM8,&TIM_OCInitStructure);
 	
-	//ä½¿èƒ½å®šæ—¶å™¨
+	TIM_OC1PreloadConfig(TIM8,TIM_OCPreload_Enable);
+	TIM_OC2PreloadConfig(TIM8,TIM_OCPreload_Enable);
+
+    //Ê¹ÄÜ×Ô¶¯ÖØ×°ÔØµÄÔ¤×°ÔØ¼Ä´æÆ÷ÔÊÐíÎ»
+    TIM_ARRPreloadConfig(TIM8,ENABLE);
+	
+	//¸ß¼¶¶¨Ê±Æ÷Ö÷Êä³öÊ¹ÄÜ
+	TIM_CtrlPWMOutputs(TIM8,ENABLE);
+	
+	//Ê¹ÄÜ¶¨Ê±Æ÷
 	TIM_Cmd(TIM8,ENABLE);
 }
 
 /**********
- * é™å¹…å‡½æ•°
+ * ÏÞ·ùº¯Êý
 **********/
 void PWM_Limit(int32_t *motorA,int32_t *motorB)
 {
@@ -96,7 +101,7 @@ void PWM_Limit(int32_t *motorA,int32_t *motorB)
 }
 
 /**********
- * ç»å¯¹å€¼å‡½æ•°
+ * ¾ø¶ÔÖµº¯Êý
 **********/
 int32_t my_abs(int32_t p)
 {
@@ -106,20 +111,20 @@ int32_t my_abs(int32_t p)
 }
 
 /**********
- * èµ‹å€¼å‡½æ•°
+ * ¸³Öµº¯Êý
 **********/
 void Load_PWM(int32_t motorA,int32_t motorB)
 {
-    //æ­£åè½¬
-    if (motorA > 0) MotorA_IN1 = 1, MotorA_IN2 = 0;
-    else            MotorA_IN1 = 0, MotorA_IN2 = 1;
-    //èµ‹å€¼ï¼ŒPWMAè¾“å‡º
+    //Õý·´×ª
+    if (motorA > 0) MotorA_IN1 = 0, MotorA_IN2 = 1;
+    else            MotorA_IN1 = 1, MotorA_IN2 = 0;
+    //¸³Öµ£¬PWMAÊä³ö
     TIM_SetCompare1(TIM8,my_abs(motorA));
 
-    //æ­£åè½¬
-    if (motorB > 0) MotorB_IN3 = 1, MotorB_IN4 = 0;
-    else            MotorB_IN3 = 0, MotorB_IN4 = 1;
-    //èµ‹å€¼ï¼ŒPWMBè¾“å‡º
+    //Õý·´×ª
+    if (motorB > 0) MotorB_IN3 = 0, MotorB_IN4 = 1;
+    else            MotorB_IN3 = 1, MotorB_IN4 = 0;
+    //¸³Öµ£¬PWMBÊä³ö
     TIM_SetCompare2(TIM8,my_abs(motorB));
 }
 

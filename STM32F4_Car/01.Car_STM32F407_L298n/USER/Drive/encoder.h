@@ -3,7 +3,6 @@
 
 #include "sys.h"
 
-void Encoder_Init(void);
 void TIM3_Encoder_Init(void);
 void TIM4_Encoder_Init(void);
 
